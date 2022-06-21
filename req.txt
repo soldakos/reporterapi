@@ -1,0 +1,8 @@
+fastapi
+cx-oracle
+uvicorn==0.14.0
+# pysvn
+file_read_backwards
+python-redmine
+python-dateutil
+jmespath

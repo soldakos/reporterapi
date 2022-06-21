@@ -1,0 +1,8 @@
+__pycache__/
+logs/
+.idea/
+.svn/
+venv/
+*.bat
+.vscode/
+.pytest_cache/
