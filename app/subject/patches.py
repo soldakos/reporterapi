@@ -3,12 +3,13 @@ import os
 import re
 from operator import itemgetter
 from pathlib import Path
+from shutil import copy
 
-from app.db.api import patches_root_properties, patches_user_subdir_file_order, patches_user_subdir_order
+from app.db.api import patches_root_properties, patches_user_subdir_file_order, patches_user_subdir_order, projects
 from app.db.core import exec_cmd
 from app.db.datasources import get_conn
 from app.models import FillInstallSql
-from app.tools import read_file, write_file, raise_error_from_dict
+from app.toolkit import read_file, write_file, raise_error_from_dict, get_server_info, choose_files
 
 
 def get_readme_struct():
@@ -58,42 +59,6 @@ def patchedit(dir, patchnum, alias):
     return {"readme": readme, "patchusers": patchusers, "patchserveraddr": patchserveraddr, "aliaspos": aliaspos, "patchdir": patchdir, "patchdirserv": patchdirserv, "error": error}
 
 
-def deleteFile(path):
-    """
-    Delete file from edit patch
-    :param path: file path
-    :return: dict of patch new struct
-    """
-    error = ''
-    try:
-        Path(path).unlink() if not Path(path).is_dir() else Path(path).rmdir()
-    except Exception as e:
-        error = str(e)
-
-    return {"error": error}
-
-
-def saveFile(path, alias, filetext):
-    """
-    Save file
-    :param path: file path
-    :param alias: tnsnames alias
-    :param filetext: file text
-    :return: dict of some file props
-    """
-    error, patchserveraddr, aliaspos = '', '', ''
-    try:
-        write_file(get_tns_path() if path == 'TNSNAMES' else Path(path), filetext.split('\r'), rewrite=True)
-        if alias:
-            tnsnamesinfo = get_server_info(alias, filetext)
-            patchserveraddr = tnsnamesinfo['addr']
-            aliaspos = tnsnamesinfo['aliaspos']
-    except Exception as e:
-        error = str(e)
-
-    return {"patchserveraddr": patchserveraddr, "aliaspos": aliaspos, "error": error}
-
-
 def patchStructure(patchdir):
     """
     Get patch structure
@@ -109,27 +74,25 @@ def patchStructure(patchdir):
     return {"data": data, "error": error}
 
 
-def openFile(path):
-    """
-    Open file from patch
-    :param patchdir: patch directory
-    :param path: file path
-    :return: file text
-    """
-    error, filetext = '', ''
-    try:
-        (path_, filetext) = read_tnsnames() if path == 'TNSNAMES' else ('', read_file(Path(path)))
-    except Exception as e:
-        error = str(e)
-    print("openFile ... ", path, {"filetext": filetext, "error": error})
-    return {"filetext": filetext, "error": error}
+def copyToFolder(path, project, bv_id):
+    error, data = '', []
+    if path:
+        try:
+            data = projects(global_name=project, bv_id=bv_id)["data"]
+            project_path = '' if not data else data[0]['path']
+            result = choose_files(path=project_path, filters=["*exe; *txt", "*.*"])
+            [copy(x, path) for x in result]
+        except Exception as e:
+            error = str(e)
+
+    return {"error": error}
 
 
 def set_proj(project, bv_id):
     conn = get_conn()
     res = exec_cmd(conn=conn,
-                   cmdtext=f"insert or ignore into reporter_patchesproj(name, bittlvers_id) values (:name, :bittlvers_id)",
-                   cmdparams={'name': project, 'bittlvers_id': bv_id})
+                   cmdtext=f"insert or ignore into reporter_projects(name, global_name, bittlvers_id) values (:name, :global_name, :bittlvers_id)",
+                   cmdparams={'name': project, 'global_name': project, 'bittlvers_id': bv_id})
     raise_error_from_dict(res)
 
 
@@ -177,7 +140,7 @@ def fillInstallSql(body: FillInstallSql):
             ]
             # print('ISB',get_element(form, 'isbinstall'))
             if user.lower() == 'isb' and body.isbinstall:
-                text.append('whenever sqlerror exit 1\nexec db.prc_is_bimeg\nwhenever sqlerror continue\n')
+                text.append('whenever sqlerror exit 1\npost db.prc_is_bimeg\nwhenever sqlerror continue\n')
             # get files from dir
             install_sql_rows = []
             dirs_ = (x for x in Path(body.patchdirserv, user).iterdir() if x.is_dir())
@@ -204,12 +167,13 @@ def fillInstallSql(body: FillInstallSql):
 def patchInstall(patchdirserv):
     error = ''
     try:
-        os.system(f'cmd.exe /C "cd {patchdirserv} && @install.bat"')
+        # os.system(f'cmd.exe /C "cd /d {patchdirserv} && @install.bat"')
+        import subprocess
+        subprocess.run(["start", "/wait", "cmd", "/C", f"cd /d {patchdirserv} && install.bat"], shell=True)
     except Exception as e:
         error = str(e)
 
     return {"error": error}
-
 
 
 def get_file_order(source, name):
@@ -271,53 +235,6 @@ def execute_load_structure(patchdir):
     scan_dir(0, patchdir)
     # print('tree = ', tree)
     return tree
-
-
-def get_tns_path():
-    return Path(os.environ['TNS_ADMIN'], 'tnsnames.ora')
-
-
-def read_tnsnames():
-    path = get_tns_path()
-    return path, read_file(path)
-
-
-def get_server_info(alias, ftext=''):
-    if not ftext:
-        path, ftext = read_tnsnames()
-    ftext = ftext.upper()
-    alias = alias.upper()
-    aliaspos, linealiaspos = -1,-1
-    host, port, service = '','',''
-    for line in ftext.replace(' ', '').splitlines():
-        if linealiaspos == -1:
-            linealiaspos = line.find(alias + '=', 0, len(alias + '='))
-        if linealiaspos == -1:
-            continue
-        if host == '':
-            hostind = line.find('HOST=')
-            if hostind == -1:
-                continue
-            host = line[hostind + 5:line.find(')', hostind + 5)]
-        if port == '' and host != '':
-            portfind = line.find('PORT=')
-            if portfind == -1:
-                continue
-            port = line[portfind + 5:portfind + 9]
-        if service == '' and port != '':
-            servicefind = line.find('SERVICE_NAME=')
-            if servicefind == -1:
-                servicefind = line.find('SID=')
-            if servicefind == -1:
-                continue
-            servicefind = line.find('=', servicefind) + 1
-            service = line[servicefind:line.find(')', servicefind)].lower()
-            break
-    if host != '':
-        aliaspos = ftext.find(f"\n{alias} ")+1
-
-    # print("get_server_info ... ", f'{host}:{port} / {service}', "   alias = ", alias, "  ... aliaspos = ", aliaspos)
-    return {"addr": f'{host}:{port} / {service}', "aliaspos": aliaspos}
 
 
 def get_patch_root_props(bv_id):

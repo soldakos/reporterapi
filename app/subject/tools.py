@@ -1,17 +1,40 @@
-import datetime
-import os
 import re
-from operator import itemgetter
 from pathlib import Path
 
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.db import api
 from app.responses import global_resp
+from app.toolkit import write_file, get_element
 
 
-def exec(req: Request, resp: Response, key, body):
-    error, result = '', ''
+def get(req: Request, resp: Response, key, **kwargs):
+    result, error = {}, ''
+    try:
+        if key == "tnsPaths":
+            result = api.tnsnames()
+        elif key == "services":
+            result = api.services()
+        elif key == "projects":
+            def get_readme(path):
+                return [
+                    {"file": x.name, "path": x, "ext": x.suffix.lower()} for x in list(Path(path).rglob("*"))
+                    if re.search(r"(_|!|^)readme", x.stem, re.IGNORECASE) and
+                       not re.search(r"~|\\.svn\\|\\.pytest_cache\\|\\venv\\|\\components\\", str(x), re.IGNORECASE)
+                ] if path else ''
+
+            result['data'] = [{"name": x["name"], "path": x["path"], "description": x["description"], "docspath": x["docspath"], "readme": get_readme(x["path"])}
+                              for x in api.projects()["data"]]
+    except Exception as e:
+        error = str(e)
+    error = error or get_element(result, 'error', '')
+
+    return global_resp(resp=resp, data={"data": get_element(result, 'data', []), "error": error})
+
+
+def post(req: Request, resp: Response, key, body):
+    result, error = {}, ''
     try:
         if key == "exception":
             # prepare param list
@@ -64,11 +87,13 @@ def exec(req: Request, resp: Response, key, body):
                      f"/\n"
         elif key == "replace":
             result = re.sub("(\r\n|\n\n|\t|\r)+", "\n", body['replaceIn'])
-            result = re.sub(body['replaceFrom'] + '+', body['replaceTo'], result)
+            result = re.sub(body['replaceFrom'].replace('+', '\+') + '+', body['replaceTo'], result)
+        elif key == "tnsSave":
+            # print('paths = ', body['tnsPaths'], '..... text = ',body['tnsText'][:300])
+            [write_file(path=x['path'], text=body['tnsText'], rewrite=True) for x in body['tnsPaths']]
 
     except Exception as e:
         error = str(e)
+    error = error or get_element(result, 'error', '')
 
-    return global_resp(resp=resp,
-                       data={"data": result, "error": error},
-                       kwargs={"errcode": 500 if error else 0, "error": error})
+    return global_resp(resp=resp, data={"data": result, "error": error})

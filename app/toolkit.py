@@ -53,16 +53,10 @@ def req_to_json(model: BaseModel, raiseexc=True):
         return msg
 
 
-def get_element_(data, elem, default=None, raiseerr_empty_msg=None):
-    if raiseerr_empty_msg and (not data or elem not in data or not data[elem]):
-        raise ValueError(raiseerr_empty_msg)
-    return default if not data or elem not in data else data[elem]
-
-
 def get_element(data, elem, default=None, raiseerr_empty_msg=None):
     if raiseerr_empty_msg and (not data or elem not in data or not data[elem]):
         raise ValueError(raiseerr_empty_msg)
-    return default if not data or elem not in data else data[elem]
+    return default if not data or elem not in data or not isinstance(data, dict) else data[elem]
 
 
 def find_element_value(data, elem, val):
@@ -203,46 +197,86 @@ def get_quote_or_null(value):
     return f'\'{value}\'' if value else 'null'
 
 
-def read_file(path, encoding='utf-8'):
+def read_file(path, encoding='utf-8', error=False):
     if not Path(path).exists():
         return ''
     try:
-        with path.open(mode='r', encoding=encoding) as f:
+        with Path(path).open(mode='r', encoding=encoding) as f:
             return f.read()
     except Exception as e:
-        if encoding == 'utf-8':
+        if encoding == 'utf-8' and not error:
             print(f'Can\'t read file {path} with encoding {encoding}')
-            return read_file(path, 'windows-1251')
-        return f'ERROR: {e}'
+            return read_file(path, 'windows-1251', error=True)
+        elif encoding == 'windows-1251' and not error:
+            print(f'Can\'t read file {path} with encoding {encoding}')
+            return read_file(path, 'utf-8', error=True)
+        raise Exception(f'Can\'t read file "{path}" with error {e}')
 
 
 def write_file(path, text='', encoding='utf-8', rewrite=False, newline=None):
-    if path.exists() and not rewrite:
+    if Path(path).exists() and not rewrite:
         return
     try:
-        with path.open(mode='w', encoding=encoding, newline=newline) as f:
+        with Path(path).open(mode='w', encoding=encoding, newline=newline) as f:
             f.writelines(text)
     except Exception as e:
         print(f'Can\'t write file {path} with error {e}')
+        raise Exception(f'Can\'t write file {path} with error {e}')
 
 
-def read_tnsnames():
-    path = Path(os.environ['TNS_ADMIN'], 'tnsnames.ora')
-    return path, read_file(path)
+def deleteFile(path):
+    try:
+        Path(path).unlink() if not Path(path).is_dir() else Path(path).rmdir()
+    except Exception as e:
+        raise Exception(f'Can\'t delete file {path} with error {e}')
+
+
+def file_open(path):
+    if not Path(path).exists():
+        return
+    try:
+        os.system(path)
+    except Exception as e:
+        raise Exception(f'Can\'t open {path} with error {e}')
+
+
+def file_browser(path):
+    if not Path(path).exists():
+        return
+    try:
+        import subprocess
+        subprocess.run(f'explorer / ,"{Path(path)}"')
+    except Exception as e:
+        raise Exception(f'Can\'t open explorer on {path} with error {e}')
+
+
+def get_tns_path():
+    return Path(os.environ['TNS_ADMIN'], 'tnsnames.ora')
+
+
+def saveFile(path, encoding, alias, filetext):
+    error, patchserveraddr, aliaspos = '', '', ''
+    try:
+        write_file(get_tns_path() if path == 'TNSNAMES' else Path(path), filetext.split('\r'), encoding=encoding, rewrite=True)
+        if alias:
+            tnsnamesinfo = get_server_info(alias, filetext)
+            patchserveraddr = tnsnamesinfo['addr']
+            aliaspos = tnsnamesinfo['aliaspos']
+    except Exception as e:
+        error = str(e)
+
+    return {"patchserveraddr": patchserveraddr, "aliaspos": aliaspos, "error": error}
 
 
 def get_server_info(alias, ftext=''):
-    if not ftext:
-        path, ftext = read_tnsnames()
-    ftext = ftext.upper()
-    aliaspos = -1
-    linealiaspos = -1
-    host = ''
-    port = ''
-    service = ''
+    ftext = (read_file(get_tns_path()) if not ftext else ftext).upper()
+    # ftext = ftext.upper()
+    alias = alias.upper()
+    aliaspos, linealiaspos = -1, -1
+    host, port, service = '', '', ''
     for line in ftext.replace(' ', '').splitlines():
         if linealiaspos == -1:
-            linealiaspos = line.find(alias.upper() + '=', 0, len(alias.upper() + '='))
+            linealiaspos = line.find(alias + '=', 0, len(alias + '='))
         if linealiaspos == -1:
             continue
         if host == '':
@@ -265,20 +299,10 @@ def get_server_info(alias, ftext=''):
             service = line[servicefind:line.find(')', servicefind)].lower()
             break
     if host != '':
-        aliaspos = ftext.find(alias.upper() + ' =')
-    return {"alias": alias, "addr": f'{host}:{port} / {service}', "aliaspos": aliaspos}
+        aliaspos = ftext.find(f"\n{alias} ") + 1
 
-
-# def get_sidebar_data():
-#     service_list = [{'service': x, 'title': f'Выгрузка и анализ логов {x}', 'server': []}
-#                     for x in list(LogFiles.objects.values_list('service', flat=True).exclude(service='All').distinct().order_by('service'))]
-#     for rec in service_list:
-#         [rec['server'].append(x)
-#          for x in list(LogFiles.objects.values_list('server', flat=True).filter(service=rec['service']).distinct().order_by('server'))]
-#     return {'databases': Databases.objects.exclude(name='all'),
-#             'queries': Queries.objects.all(),
-#             'bvs': BittlVers.objects.exclude(name='all'),
-#             'log': service_list}
+    # print("get_server_info ... ", f'{host}:{port} / {service}', "   alias = ", alias, "  ... aliaspos = ", aliaspos)
+    return {"addr": f'{host}:{port} / {service}', "aliaspos": aliaspos}
 
 
 def get_conn(source):
@@ -289,9 +313,12 @@ def get_conn(source):
 
 def fetchallformat(data, cursor):
     def format(desc, row):
+        print('desc =    ',desc)
+        print('row =    ', row)
         return tuple(x[1].strftime("%Y.%m.%d %H:%M:%S.%f") if x[1] and x[0] in (cx_Oracle.DB_TYPE_TIMESTAMP, cx_Oracle.DB_TYPE_TIMESTAMP_TZ, cx_Oracle.DB_TYPE_TIMESTAMP_LTZ) else
                      # x[1].strftime("%Y.%m.%d %H:%M:%S").replace(' 00:00:00', '') if x[1] and x[0] == cx_Oracle.DB_TYPE_DATE else
                      x[1].strftime("%Y.%m.%d %H:%M:%S") if x[1] and x[0] == cx_Oracle.DB_TYPE_DATE else
+                     str(x[1]) if x[1] and x[0] in (cx_Oracle.DB_TYPE_LONG_RAW, cx_Oracle.DB_TYPE_LONG, cx_Oracle.DB_TYPE_RAW, cx_Oracle.DB_TYPE_BLOB) else
                      x[1] for x in zip([x[1] for x in desc], row))
 
     return [format(cursor.description, row) for row in (x for x in data)]
@@ -327,3 +354,8 @@ def get_date_now_format(format):
 def raise_error_from_dict(res):
     if res['errcode'] != 0:
         raise Exception(res['error'])
+
+
+def choose_files (path, multiple=True, preview=True, filters=None):
+    import plyer
+    return plyer.filechooser.open_file(path=path, multiple=multiple, preview=preview, filters=filters)

@@ -1,7 +1,4 @@
-import datetime
-
 from pydantic.main import BaseModel
-from typing import List, Optional
 from pydantic import Field
 
 
@@ -24,13 +21,9 @@ class DetailQuery(BaseModel):
     param: str = Field(title='Param for sql')
 
 
-# class PatchFilePaths(BaseModel):
-#     patchdir: str = Field(title='Patch dir path')
-#     path: str = Field(title='Patch file path')
-
-
-class PatchFileSave(BaseModel):
+class FileSave(BaseModel):
     path: str = Field(title='Patch file path')
+    encoding: str = Field(title='Patch file encoding')
     alias: str = Field(title='Patch install TNS names alias')
     filetext: str = Field(title='Patch file text')
 

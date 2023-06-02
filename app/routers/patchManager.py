@@ -1,9 +1,10 @@
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app import toolkit
 from app.decorator import func_timer
-# from app.models import PatchFilePaths, PatchFileSave, PatchCreate, RedmineRoot, FillInstallSql
-from app.models import PatchFileSave, PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
+# from app.models import PatchFilePaths, FileSave, PatchCreate, RedmineRoot, FillInstallSql
+from app.models import FileSave, PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
 from app.responses import global_resp
 from app.subject import patches, redmine, svn
 
@@ -18,36 +19,14 @@ def patchedit(req: Request, resp: Response, dir, patchnum, alias, **kwargs):
     return global_resp(resp=resp, data=patches.patchedit(dir, patchnum, alias), kwargs=kwargs)
 
 
-# def patchedit(req: Request, resp: Response, bv_id, patchnum, **kwargs):
-#     return global_resp(resp=resp, data=patches.patchedit(bv_id, patchnum), kwargs=kwargs)
-
-
-@func_timer
-def deleteFile(req: Request, resp: Response, path, **kwargs):
-    return global_resp(resp=resp, data=patches.deleteFile(path), kwargs=kwargs)
-
-
-# def deleteFile(req: Request, resp: Response, body: PatchFilePaths, **kwargs):
-#     return global_resp(resp=resp, data=patches.deleteFile(body.patchdir, body.path), kwargs=kwargs)
-
-
-@func_timer
-def saveFile(req: Request, resp: Response, body: PatchFileSave, **kwargs):
-    return global_resp(resp=resp, data=patches.saveFile(body.path, body.alias, body.filetext), kwargs=kwargs)
-
-
-@func_timer
-def openFile(req: Request, resp: Response, path, **kwargs):
-    return global_resp(resp=resp, data=patches.openFile(path), kwargs=kwargs)
-
-
-# def openFile(req: Request, resp: Response, body: PatchFilePaths, **kwargs):
-#     return global_resp(resp=resp, data=patches.openFile(body.patchdir, body.path), kwargs=kwargs)
-
-
 @func_timer
 def patchStructure(req: Request, resp: Response, patchdir: str, **kwargs):
     return global_resp(resp=resp, data=patches.patchStructure(patchdir), kwargs=kwargs)
+
+
+@func_timer
+def copyToFolder(req: Request, resp: Response, path, project, bv_id, **kwargs):
+    return global_resp(resp=resp, data=patches.copyToFolder(path, project, bv_id), kwargs=kwargs)
 
 
 @func_timer

@@ -1,4 +1,8 @@
-from app.tools import get_element, get_element_deep
+from pathlib import Path
+
+from app.logapi import logerror
+from app.toolkit import get_element, get_element_deep
+from settings import BASE_DIR
 
 connections = {}
 
@@ -18,7 +22,9 @@ def get_conn(filial_id=0, db='sqllite', alternate_user='', alternate_pwd=''):
                                  dsn=get_element_deep(connections, [str(filial_id), 'dsn']))
     else:
         import sqlite3
-        conn = sqlite3.connect('db.sqlite3')
+        logerror(f' root = {BASE_DIR}')
+        print(' root = ', BASE_DIR)
+        conn = sqlite3.connect(Path(BASE_DIR,'db.sqlite3'))
     return conn
 
 

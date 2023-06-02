@@ -1,8 +1,10 @@
 fastapi
 cx-oracle
-uvicorn==0.14.0
-# pysvn
+uvicorn
+# pysvn py37-pysvn-svn1141-1.9.13-2056-Win64.exe
+pysvn
 file_read_backwards
 python-redmine
 python-dateutil
 jmespath
+plyer

@@ -39,8 +39,8 @@ def patches_install_comments(req: Request, resp: Response, **kwargs):
 
 
 @func_timer
-def patches_projects(req: Request, resp: Response, **kwargs):
-    return global_resp(resp=resp, data=dbapi.patches_projects(), kwargs=kwargs)
+def unique_projects(req: Request, resp: Response, **kwargs):
+    return global_resp(resp=resp, data=dbapi.projects(unique=True), kwargs=kwargs)
 
 
 @func_timer

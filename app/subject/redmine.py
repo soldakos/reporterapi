@@ -7,7 +7,7 @@ from redminelib import Redmine
 #     urlroot = Settings.objects.get(name='RedmineRootUrl').value
 #     urlissues = Settings.objects.get(name='RedmineIssuesUrl').value
 from app.models import RedmineCreate
-from app.tools import get_date_now_format
+from app.toolkit import get_date_now_format
 
 
 def get_user(username, password, urlroot, id):

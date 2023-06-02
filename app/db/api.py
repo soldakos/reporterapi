@@ -52,14 +52,6 @@ def patches_install_comments():
     return res
 
 
-def patches_projects():
-    res = exec_query(querytext="""select pp.name, bv.name bv_name from reporter_patchesproj pp, reporter_bittlvers bv 
-                                  where pp.bittlvers_id = bv.id or bv.name = 'all' 
-                                  order by pp.name""")
-    print('patches_projects = ', res)
-    return res
-
-
 def patches_user_subdirs():
     res = exec_query_pure(querytext="""select name from reporter_patchesusersubdir order by 'order'""", array=True)
     print('patches_user_subdirs = ', res)
@@ -85,6 +77,29 @@ def patches_user_subdir_file_order(name):
                           queryparams=[name],
                           array=True)
     print('patches_user_subdir_file_order = ', res)
+    return res
+
+
+def tnsnames():
+    res = exec_query(querytext="""select path from reporter_tnsnames t where active = 1 order by 'order'""")
+    print('tnsnames = ', res)
+    return res
+
+
+def services():
+    res = exec_query(querytext="""select name, url, servertype from reporter_services t where active = 1 order by 'order'""")
+    print('services = ', res)
+    return res
+
+
+def projects(unique=False, global_name=None, bv_id=None):
+    print(' api projects bv_id = ',bv_id)
+    columns = '*' if not unique else 'distinct global_name'
+    where = f" and lower(global_name) = '{global_name.lower()}'" if global_name else ''
+    where = f"{where} and bittlvers_id in ({bv_id}, 3)" if bv_id else where
+    querytext = f"""select {columns} from reporter_projects t where active = 1 {where} order by 'order', name"""
+    res = exec_query(querytext=querytext)
+    print('projects, querytext = ', res, querytext)
     return res
 
 

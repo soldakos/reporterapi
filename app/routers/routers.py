@@ -1,10 +1,10 @@
-from typing import Dict
+from typing import Dict, Union
 
-from fastapi import Request, Response, APIRouter
+from fastapi import Request, Response, APIRouter, Query as fastapiQuery, Path
 
 from app.routers import queryExec, patchManager
-# from app.models import Query, PureStrReq, DetailQuery, PatchFilePaths, PatchFileSave, PatchCreate, RedmineRoot, FillInstallSql
-from app.models import Query, DetailQuery, PatchFileSave, PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
+# from app.models import Query, PureStrReq, DetailQuery, PatchFilePaths, FileSave, PatchCreate, RedmineRoot, FillInstallSql
+from app.models import Query, DetailQuery, FileSave, PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
 from app.subject import anyother, tools
 
 router = APIRouter()
@@ -91,12 +91,12 @@ def patches_install_comments(req: Request, resp: Response):
     return queryExec.patches_install_comments(req, resp)
 
 
-@router.get(path='/patches_projects',
-            description="projects",
+@router.get(path='/unique_projects',
+            description="unique projects names",
             tags=['patches']
             )
 def patches_projects(req: Request, resp: Response):
-    return queryExec.patches_projects(req, resp)
+    return queryExec.unique_projects(req, resp)
 
 
 @router.get(path='/patches_user_subdirs',
@@ -132,47 +132,35 @@ def patchedit(req: Request, resp: Response, dir, patchnum, alias):
 
 
 @router.delete(path='/deleteFile',
-               description="delete file from patch",
-               tags=['patches']
+               description="delete file",
+               tags=['others']
                )
 def deleteFile(req: Request, resp: Response, path):
-    return patchManager.deleteFile(req, resp, path)
-
-
-# def deleteFile(req: Request, resp: Response, body: PatchFilePaths):
-#     return patchManager.deleteFile(req, resp, body)
+    return anyother.delete_file(req, resp, path)
 
 
 @router.post(path='/saveFile',
              description="save text to file",
              tags=['patches']
              )
-def saveFile(req: Request, resp: Response, body: PatchFileSave):
-    return patchManager.saveFile(req, resp, body)
+def saveFile(req: Request, resp: Response, body: FileSave):
+    return anyother.saveFile(req, resp, body)
 
 
-@router.get(path='/openFile',
-            description="open file from patch",
-            tags=['patches']
-            )
-def openFile(req: Request, resp: Response, path):
-    return patchManager.openFile(req, resp, path)
-
-
-# @router.post(path='/openFile',
-#              description="open file from patch",
-#              tags=['patches']
-#              )
-# def openFile(req: Request, resp: Response, body: PatchFilePaths):
-#     return patchManager.openFile(req, resp, body)
-#
-#
 @router.get(path='/patchStructure',
             description="get patch file structure",
             tags=['patches']
             )
 def patchStructure(req: Request, resp: Response, patchdir: str):
     return patchManager.patchStructure(req, resp, patchdir)
+
+
+@router.get(path='/copyToFolder',
+            description="copy some project files to patch folder",
+            tags=['patches']
+            )
+def copyToFolder(req: Request, resp: Response, path, project, bv_id):
+    return patchManager.copyToFolder(req, resp, path, project, bv_id)
 
 
 @router.post(path='/patchCreate',
@@ -236,7 +224,47 @@ def redmineCreateTask(req: Request, resp: Response, body: RedmineCreate):
              tags=['tools']
              )
 def tools_exec(req: Request, resp: Response, key: str, body: Dict):
-    return tools.exec(req, resp, key, body)
+    return tools.post(req, resp, key, body)
+
+
+@router.get(path='/tools',
+            description="tools",
+            tags=['tools']
+            )
+def tools_exec(req: Request, resp: Response, key: str):
+    return tools.get(req, resp, key)
+
+
+@router.get(path='/openFile',
+            description="openFile",
+            tags=['others']
+            )
+def openFile(req: Request, resp: Response, path: str):
+    return anyother.open_file(req, resp, path)
+
+
+@router.get(path='/readFile',
+            description="readFile",
+            tags=['others']
+            )
+def readFile(req: Request, resp: Response, path: str, encoding: Union[str, None] = "utf-8"):
+    return anyother.read_file(req, resp, path, encoding)
+
+
+@router.post(path='/writeFile',
+             description="writeFile",
+             tags=['others']
+             )
+def writeFile(req: Request, resp: Response, path: str, body: Dict):
+    return anyother.write_file(req, resp, path, body)
+
+
+@router.get(path='/fileBrowser',
+            description="fileBrowser",
+            tags=['others']
+            )
+def fileBrowser(req: Request, resp: Response, path: str):
+    return anyother.file_browser(req, resp, path)
 
 
 @router.get(path='/admin',
