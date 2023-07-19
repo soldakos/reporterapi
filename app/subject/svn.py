@@ -1,8 +1,6 @@
 from datetime import datetime
 import pysvn
 
-# from app.db.api import svnurl
-
 client = pysvn.Client()
 
 
