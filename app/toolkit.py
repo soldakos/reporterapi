@@ -213,7 +213,7 @@ def read_file(path, encoding='utf-8', error=False):
         raise Exception(f'Can\'t read file "{path}" with error {e}')
 
 
-def write_file(path, text='', encoding='utf-8', rewrite=False, newline=None):
+def write_file(path, text='', encoding='windows-1251', rewrite=False, newline=None):
     if Path(path).exists() and not rewrite:
         return
     try:

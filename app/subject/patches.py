@@ -118,7 +118,8 @@ def patchCreate(bv_id, patchdir, patchdirserv, patchusers, scriptdirs, scriptfil
         write_file(path=Path(patchdirserv, 'readme.txt'),
                    text=f"{readmehead}\n{readmebody}\n\n{readmefoot}".splitlines(keepends=True),
                    rewrite=True,
-                   newline='\n')
+                   # newline='\n'
+                   )
         set_proj(project, bv_id)
     except Exception as e:
         print('... partch create error... ', str(e))
@@ -212,7 +213,7 @@ def load_readme(patchdirserv):
         data['patchReason'] = data['patchreadmehead'][data['patchreadmehead'].find('Основание: ') + len('Основание: '):
                                                       data['patchreadmehead'].find('Описание:') - 2]
     except Exception as e:
-        data['patchReason'] = e
+        data['patchReason'] = str(e)
     data['project'] = data['patchreadmehead'].splitlines()[1]
     textarr = data['patchreadmefoot'].splitlines()
     data['installComment'] = textarr[textarr.index('Особенности установки:') + 1].strip()
