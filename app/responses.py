@@ -1,5 +1,5 @@
-import base64
 import time
+
 from fastapi import Response
 from starlette.status import HTTP_200_OK
 

@@ -1,5 +1,4 @@
 import datetime
-import os
 import re
 from operator import itemgetter
 from pathlib import Path
@@ -98,7 +97,7 @@ def set_proj(project, bv_id):
 
 def patchCreate(bv_id, patchdir, patchdirserv, patchusers, scriptdirs, scriptfiles, readmehead, readmebody, readmefoot, project, clientdir):
     error = ''
-    print('... partch create ... ', bv_id, patchdir, patchdirserv, patchusers, scriptdirs, scriptfiles, readmehead, readmebody, readmefoot, project, clientdir)
+    print('... patch create ... ', bv_id, patchdir, patchdirserv, patchusers, scriptdirs, scriptfiles, readmehead, readmebody, readmefoot, project, clientdir)
     try:
         print('mkdir ... ', Path(patchdirserv).mkdir(parents=True, exist_ok=True))
         sqlplusinstall = ''
@@ -134,10 +133,10 @@ def fillInstallSql(body: FillInstallSql):
         for user in get_user_list_in_install_order(Path(body.patchdirserv, 'install.bat')):
             sysdba = ' as sysdba' if user == 'sys' else ''
             text = [
-                f"spool ..\{Path('log', body.patchnum)}.{user}.log\nset define off\nset serverout on\n"
-                f"prompt connect {user}@{body.patchalias}{sysdba};\n"
-                f"connect {user}@{body.patchalias}{sysdba};\nprompt\ntimin start\n\n"
-                f"insert into {body.patchowner}.patch_history (patch_name, script_name) values ('{body.patchnum}', '{user}\install.sql');\ncommit;\n"
+                rf"spool ..\{Path('log', body.patchnum)}.{user}.log\nset define off\nset serverout on\n"
+                rf"prompt connect {user}@{body.patchalias}{sysdba};\n"
+                rf"connect {user}@{body.patchalias}{sysdba};\nprompt\ntimin start\n\n"
+                rf"insert into {body.patchowner}.patch_history (patch_name, script_name) values ('{body.patchnum}', '{user}\install.sql');\ncommit;\n"
             ]
             # print('ISB',get_element(form, 'isbinstall'))
             if user.lower() == 'isb' and body.isbinstall:
@@ -168,9 +167,13 @@ def fillInstallSql(body: FillInstallSql):
 def patchInstall(patchdirserv):
     error = ''
     try:
-        # os.system(f'cmd.exe /C "cd /d {patchdirserv} && @install.bat"')
         import subprocess
-        subprocess.run(["start", "/wait", "cmd", "/C", f"cd /d {patchdirserv} && install.bat"], shell=True)
+        import os
+        import sys
+        # Формируем команду для запуска install.bat в нужной директории
+        # /d — смена диска, /c — выполнить команду и выйти
+        subprocess.run(["start", "/wait", "cmd", "/C", f"cd /d {patchdirserv} && install.bat"], shell=True, check=True, env=os.environ,)
+        # subprocess.run(f'cmd.exe /c "cd /d {patchdirserv} && install.bat"', shell=True, check=True)
     except Exception as e:
         error = str(e)
 
@@ -182,7 +185,7 @@ def get_file_order(source, name):
     if source == 'dirs':
         res = patches_user_subdir_order(name)
     elif source == 'files':
-        res = patches_user_subdir_file_order(name)
+        res = patches_user_subdir_file_order(name, Path(name).suffix)
     if res['error']:
         raise Exception(res['error'])
     return res['data'][0] if res['data'] else 100

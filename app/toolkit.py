@@ -1,10 +1,15 @@
+import traceback
 from pathlib import Path
-import cx_Oracle, os, datetime, copy
 
-# from datetime import datetime
+import datetime
+from sys import exc_info
 
+import oracledb
+import os
 from fastapi.encoders import jsonable_encoder
 from pydantic.main import BaseModel
+
+# from datetime import datetime
 
 
 ISO_FORMAT = '%Y-%m-%dT%H:%M:%S.000Z'
@@ -308,17 +313,17 @@ def get_server_info(alias, ftext=''):
 def get_conn(source):
     usr = source.connectionstring[0:source.connectionstring.index('/')]
     pwd = source.connectionstring[source.connectionstring.index('/') + 1: -1]
-    return cx_Oracle.connect(usr, pwd, source.dns, nencoding='UTF8')
+    return oracledb.connect(usr, pwd, source.dns, nencoding='UTF8')
 
 
 def fetchallformat(data, cursor):
     def format(desc, row):
         print('desc =    ',desc)
         print('row =    ', row)
-        return tuple(x[1].strftime("%Y.%m.%d %H:%M:%S.%f") if x[1] and x[0] in (cx_Oracle.DB_TYPE_TIMESTAMP, cx_Oracle.DB_TYPE_TIMESTAMP_TZ, cx_Oracle.DB_TYPE_TIMESTAMP_LTZ) else
-                     # x[1].strftime("%Y.%m.%d %H:%M:%S").replace(' 00:00:00', '') if x[1] and x[0] == cx_Oracle.DB_TYPE_DATE else
-                     x[1].strftime("%Y.%m.%d %H:%M:%S") if x[1] and x[0] == cx_Oracle.DB_TYPE_DATE else
-                     str(x[1]) if x[1] and x[0] in (cx_Oracle.DB_TYPE_LONG_RAW, cx_Oracle.DB_TYPE_LONG, cx_Oracle.DB_TYPE_RAW, cx_Oracle.DB_TYPE_BLOB) else
+        return tuple(x[1].strftime("%Y.%m.%d %H:%M:%S.%f") if x[1] and x[0] in (oracledb.DB_TYPE_TIMESTAMP, oracledb.DB_TYPE_TIMESTAMP_TZ, oracledb.DB_TYPE_TIMESTAMP_LTZ) else
+                     # x[1].strftime("%Y.%m.%d %H:%M:%S").replace(' 00:00:00', '') if x[1] and x[0] == oracledb.DB_TYPE_DATE else
+                     x[1].strftime("%Y.%m.%d %H:%M:%S") if x[1] and x[0] == oracledb.DB_TYPE_DATE else
+                     str(x[1]) if x[1] and x[0] in (oracledb.DB_TYPE_LONG_RAW, oracledb.DB_TYPE_LONG, oracledb.DB_TYPE_RAW, oracledb.DB_TYPE_BLOB) else
                      x[1] for x in zip([x[1] for x in desc], row))
 
     return [format(cursor.description, row) for row in (x for x in data)]
@@ -328,18 +333,18 @@ def fetchallformat_(data, cursor):
     def rowfactory(row, cursor):
         casted = []
         for value, desc in zip(row, cursor.description):
-            if value is not None and desc[1] in (cx_Oracle.TIMESTAMP, cx_Oracle.DATETIME):
-                value = value.strftime("%Y.%m.%d %H:%M:%S.%f") if desc[1] == cx_Oracle.TIMESTAMP else value.strftime("%Y.%m.%d %H:%M:%S").replace(' 00:00:00', '')
+            if value is not None and desc[1] in (oracledb.TIMESTAMP, oracledb.DATETIME):
+                value = value.strftime("%Y.%m.%d %H:%M:%S.%f") if desc[1] == oracledb.TIMESTAMP else value.strftime("%Y.%m.%d %H:%M:%S").replace(' 00:00:00', '')
             casted.append(value)
         return tuple(casted)
 
     # если в описании полей нет типов дат, то вернем как есть. ничего форматировать не будем
-    if next((i for i, x in enumerate(zip(cursor.description)) if x[0][1] in [cx_Oracle.TIMESTAMP, cx_Oracle.DATETIME]), -1) == -1:
+    if next((i for i, x in enumerate(zip(cursor.description)) if x[0][1] in [oracledb.TIMESTAMP, oracledb.DATETIME]), -1) == -1:
         return data
 
     result = []
     for x in zip(cursor.description):
-        if x[0][1] in (cx_Oracle.TIMESTAMP, cx_Oracle.DATETIME):
+        if x[0][1] in (oracledb.TIMESTAMP, oracledb.DATETIME):
             for row in data:
                 result.append(rowfactory(row, cursor))
             break
@@ -359,3 +364,15 @@ def raise_error_from_dict(res):
 def choose_files (path, multiple=True, preview=True, filters=None):
     import plyer
     return plyer.filechooser.open_file(path=path, multiple=multiple, preview=preview, filters=filters)
+
+
+def get_type(obj) -> str:
+    return type(obj).__name__ if obj else ''
+
+
+def format_traceback() -> str:
+    try:
+        return '; '.join([f"{Path(filename).name}:{linenum} in {funcname}->{source}" for filename, linenum, funcname, source in
+                          traceback.StackSummary.extract(traceback.walk_tb(exc_info()[2]), limit=5)])
+    except Exception as exc:
+        return f"{get_type(exc)}:{exc}. INVALID TRACEBACK FORMAT"

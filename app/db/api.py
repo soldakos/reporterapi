@@ -72,9 +72,13 @@ def patches_user_subdir_order(name):
     return res
 
 
-def patches_user_subdir_file_order(name):
-    res = exec_query_pure(querytext="""select t.'order' from reporter_patchesusersubdirfiles t where name = :name""",
-                          queryparams=[name],
+def patches_user_subdir_file_order(name, suffix):
+    # res = exec_query_pure(querytext="""select t.'order' from reporter_patchesusersubdirfiles t where name = :name""",
+    res = exec_query_pure(querytext="""select t.'order' from reporter_patchesusersubdirfiles t where name = :name
+                                       union all
+                                       select t.'order' from reporter_patchesusersubdirfiles t where name = :suffix
+                                    """,
+                          queryparams=dict(name=name, suffix=suffix),
                           array=True)
     print('patches_user_subdir_file_order = ', res)
     return res
@@ -93,7 +97,7 @@ def services():
 
 
 def projects(unique=False, global_name=None, bv_id=None):
-    print(' api projects bv_id = ',bv_id)
+    print(' api projects bv_id = ', bv_id)
     columns = '*' if not unique else 'distinct global_name'
     where = f" and lower(global_name) = '{global_name.lower()}'" if global_name else ''
     where = f"{where} and bittlvers_id in ({bv_id}, 3)" if bv_id else where

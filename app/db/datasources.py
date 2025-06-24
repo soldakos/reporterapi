@@ -1,11 +1,14 @@
 from pathlib import Path
 
+import oracledb
+
 from app.logapi import logerror
-from app.toolkit import get_element, get_element_deep
+from app.toolkit import get_element_deep
 from settings import BASE_DIR
 
 connections = {}
 
+oracledb.init_oracle_client()
 
 def checkErr(res):
     if res['errcode'] != 0:
@@ -16,14 +19,14 @@ def checkErr(res):
 def get_conn(filial_id=0, db='sqllite', alternate_user='', alternate_pwd=''):
     # global connections
     if db == 'oracle':
-        import cx_Oracle
-        conn = cx_Oracle.connect(user=alternate_user if alternate_user else get_element_deep(connections, [str(filial_id), 'usr']),
+        import oracledb
+        conn = oracledb.connect(user=alternate_user if alternate_user else get_element_deep(connections, [str(filial_id), 'usr']),
                                  password=alternate_pwd if alternate_pwd else get_element_deep(connections, [str(filial_id), 'pwd']),
                                  dsn=get_element_deep(connections, [str(filial_id), 'dsn']))
     else:
         import sqlite3
-        logerror(f' root = {BASE_DIR}')
-        print(' root = ', BASE_DIR)
+        # logerror(f' root = {BASE_DIR}')
+        # print(' root = ', BASE_DIR)
         conn = sqlite3.connect(Path(BASE_DIR,'db.sqlite3'))
     return conn
 

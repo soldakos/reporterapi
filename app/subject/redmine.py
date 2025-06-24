@@ -1,4 +1,5 @@
 from redminelib import Redmine
+from redminelib.resultsets import ResourceSet
 
 # def init():
 #     global username, password, urlroot, urlissues
@@ -10,9 +11,13 @@ from app.models import RedmineCreate
 from app.toolkit import get_date_now_format
 
 
-def get_user(username, password, urlroot, id):
+def get_user(username, password, urlroot, id) -> dict:
     redmine = Redmine(url=urlroot, username=username, password=password)
-    return dict(redmine.user.get('current')) if id == -1 else dict(redmine.user.get(resource_id=id))
+    if id == -1:
+        result = dict(redmine.user.get('current'))
+    else:
+        result = dict(redmine.user.get(resource_id=id))
+    return dict(id=result.get("id"), firstname=result.get("firstname"), login=result.get("login"), lastname=result.get("lastname"), )
 
 
 def prepare_text(text):
@@ -77,10 +82,17 @@ def redmine_issues(username, password, urlroot, urlissues, redmine_project_url):
     error, issues = '', []
     try:
         url = f'{urlroot}{redmine_project_url}'
-        redmine = Redmine(url=url, username=username, password=password)
-        for i, item in enumerate(redmine.issue.filter(tracker_id=6, status_id=2, assigned_to_id=get_user(username, password, urlroot, -1)['id'])):
+        print(f"url={url}, username={username}, password={password} | urlroot = {urlroot},  urlissues = {urlissues}")
+        redmine: Redmine = Redmine(url=url, username=username, password=password)
+        print(f"redmine = {redmine}, type {type(redmine)}")
+        print(f"get_user(username, password, urlroot, -1)['id'] = {get_user(username, password, urlroot, -1)['id']}")
+        filtered: ResourceSet = redmine.issue.filter(tracker_id=6, status_id=2, assigned_to_id=get_user(username, password, urlroot, -1)['id'])
+        # print(f"redmine.issue.filter(tracker_id=6, status_id=2, assigned_to_id=get_user(username, password, urlroot, -1)['id']) = {filtered}, type {type(filtered)}")
+        # print(f"count = {filtered.values_list()}")
+        # for i, item in enumerate(redmine.issue.filter(tracker_id=6, status_id=2, assigned_to_id=get_user(username, password, urlroot, -1)['id'])):
+        for i, item in enumerate(filtered):
+            print('issue = ', item)
             item_ = dict(item)
-            # print('issue = ', dict(item), 'reason = ', dict(item)['custom_fields'][0])
             dates = item_['created_on'][:item_['created_on'].find('Z')] + ' / ' + item_['updated_on'][:item_['updated_on'].find('Z')]
             dates = dates.replace('T', ' ')
             issues.append({'url': f'{urlissues}/{item_["id"]}',
@@ -100,12 +112,11 @@ def redmine_issues(username, password, urlroot, urlissues, redmine_project_url):
             for subitem in redmine.issue.filter(parent_id=item_['id'], status_id='*', sort='id:desc'):
                 # print('subitem=', dict(subitem))
                 issues[i]['child'].append({'id': dict(subitem)['id'],
-                                           'statusid': dict(subitem)['status']['id'],
-                                           'statusname': dict(subitem)['status']['name']})
+                                           'statusid': dict(subitem).get('status', dict())['id'],
+                                           'statusname': dict(subitem).get('status', dict())['name']})
                 break
-
-        # print('projs = ', projects)
     except Exception as e:
-        error = str(e)
+        raise
+        # error = f"{e} ... traceback = {format_traceback()}"
 
     return {"data": issues, "issuesurl": '', "issue": [], "error": error}

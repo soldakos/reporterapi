@@ -1,10 +1,9 @@
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app import toolkit
 from app.decorator import func_timer
 # from app.models import PatchFilePaths, FileSave, PatchCreate, RedmineRoot, FillInstallSql
-from app.models import FileSave, PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
+from app.models import PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
 from app.responses import global_resp
 from app.subject import patches, redmine, svn
 

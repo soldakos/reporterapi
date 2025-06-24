@@ -1,10 +1,10 @@
 from typing import Dict, Union
 
-from fastapi import Request, Response, APIRouter, Query as fastapiQuery, Path
+from fastapi import Request, Response, APIRouter
 
-from app.routers import queryExec, patchManager
 # from app.models import Query, PureStrReq, DetailQuery, PatchFilePaths, FileSave, PatchCreate, RedmineRoot, FillInstallSql
 from app.models import Query, DetailQuery, FileSave, PatchCreate, RedmineRoot, FillInstallSql, SVN, RedmineCreate
+from app.routers import queryExec, patchManager
 from app.subject import anyother, tools
 
 router = APIRouter()
