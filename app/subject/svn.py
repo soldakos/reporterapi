@@ -1,6 +1,9 @@
 from datetime import datetime
+from pathlib import Path
 
 import pysvn
+
+from app.toolkit import read_file
 
 client = pysvn.Client()
 
@@ -58,8 +61,29 @@ def commit_svn(url_root, url_patch, patchnum, patchdir, usr, pwd):
                     raise
         return url
 
+    def check_file(dir):
+        dir = [{'path': x, 'isDir': x.is_dir()} for x in Path(dir).iterdir() if x.name not in ('.svn', 'log')]
+        for item in dir:
+            if item['isDir']:
+                check_file(item['path'])
+            else:
+                # check encoding
+                from charset_normalizer import from_path
+                results = from_path(item['path'])
+                best_guess = results.best()
+                if best_guess:
+                    if best_guess.encoding in ('utf_8', 'utf-8'):
+                        raise Exception(f" --- {best_guess.encoding} encoding detected in {item['path']} ---")
+                else:
+                    raise Exception(f" ??? Не удалось определить кодировку в {item['path']} ???")
+                # check todo
+                data = read_file(item['path'], encoding='windows-1251', error=True)
+                if 'TODO:' in data:
+                    raise Exception(rf" +++ TODO found in {item['path']} +++")
+
     url_patch_new, rev, error = '', '', ''
     try:
+        check_file(patchdir)
         client.callback_get_login = get_login
         client.callback_get_log_message = get_log_message
         url_patch_new = url_patch if url_patch else svn_mkdir()
@@ -69,5 +93,5 @@ def commit_svn(url_root, url_patch, patchnum, patchdir, usr, pwd):
         rev = get_revision(url_patch_new)
     except Exception as e:
         error = str(e)
-
-    return {"url_patch_new": url_patch_new, "rev": rev, "error": error}
+    finally:
+        return {"url_patch_new": url_patch_new, "rev": rev, "error": error}

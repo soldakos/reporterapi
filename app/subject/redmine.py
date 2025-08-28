@@ -32,6 +32,7 @@ def prepare_text(text):
 
 # def execute_create_redmine_issue(username, password, urlroot, urlissues, project_id, subject, description, svn_url, assigned_to_id, parent_issue_id, what_todo):
 def execute_create_redmine_issue(params: RedmineCreate):
+    print(f"redmine params {params}")
     issue = {}
     try:
         redmine = Redmine(url=params.urlroot, username=params.username, password=params.password)
@@ -57,11 +58,13 @@ def execute_create_redmine_issue(params: RedmineCreate):
                                          {'id': 18, 'name': 'Проверяющий патч'}
                                      ],
                                      uploads=[])
-        issue = dict(issue)
+        issue = {key: val for key, val in dict(issue).items() if key != 'manager'}
         issue['url'] = f'{params.urlissues}/{issue["id"]}'
     except Exception as e:
         issue["error"] = str(e)
+        print(f"redmine error {e}")
 
+    print(f"redmine return issue {issue}")
     return issue
 
 

@@ -7,5 +7,5 @@ file_read_backwards
 python-redmine
 python-dateutil
 jmespath
-pywin32
+# pywin32
 plyer

@@ -370,6 +370,14 @@ def get_type(obj) -> str:
     return type(obj).__name__ if obj else ''
 
 
+def to_single_row(data: str, delimiter: str = ' ') -> str:
+    return delimiter.join(data.split())
+
+
+def get_attr_value(object, attr: str):
+    return getattr(object, attr) if object and attr and hasattr(object, attr) else ''
+
+
 def format_traceback() -> str:
     try:
         return '; '.join([f"{Path(filename).name}:{linenum} in {funcname}->{source}" for filename, linenum, funcname, source in

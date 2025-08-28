@@ -1,5 +1,5 @@
-from pydantic.main import BaseModel
 from pydantic import Field
+from pydantic.main import BaseModel
 
 
 class PureStrReq(BaseModel):
@@ -55,12 +55,12 @@ class RedmineCreate(BaseModel):
     password: str = Field(title='Redmine password')
     urlroot: str = Field(title='Redmine root url')
     urlissues: str = Field(title='Redmine issues url')
-    project_id: str = Field(title='Redmine project id')
+    project_id: int = Field(title='Redmine project id')
     subject: str = Field(title='Redmine task subject')
-    description: str = Field(title='Redmine task description')
+    description: str = Field(default="", title='Redmine task description')
     svn_url: str = Field(title='Patch svn url')
-    assigned_to_id: str = Field(title='Redmine tester id')
-    parent_issue_id: str = Field(title='Redmine parent issue')
+    assigned_to_id: int = Field(title='Redmine tester id')
+    parent_issue_id: int = Field(title='Redmine parent issue')
     what_todo: str = Field(title='Redmine task what to do')
 
 
@@ -69,7 +69,7 @@ class FillInstallSql(BaseModel):
     patchnum: str = Field(title='Patch number')
     patchalias: str = Field(title='Patch tnsnames alias')
     patchowner: str = Field(title='Patch history table owner')
-    isbinstall: str = Field(title='Patch ISB install option')
+    isbinstall: bool | int | str | None = Field(False, title='Patch ISB install option')
 
 
 class SVN(BaseModel):

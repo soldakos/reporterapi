@@ -8,7 +8,7 @@ from app.db.api import patches_root_properties, patches_user_subdir_file_order, 
 from app.db.core import exec_cmd
 from app.db.datasources import get_conn
 from app.models import FillInstallSql
-from app.toolkit import read_file, write_file, raise_error_from_dict, get_server_info, choose_files
+from app.toolkit import read_file, write_file, raise_error_from_dict, get_server_info, choose_files, get_element
 
 
 def get_readme_struct():
@@ -129,18 +129,33 @@ def patchCreate(bv_id, patchdir, patchdirserv, patchusers, scriptdirs, scriptfil
 
 def fillInstallSql(body: FillInstallSql):
     error = ''
+    print(f"fillInstallSql body = {body}")
     try:
         for user in get_user_list_in_install_order(Path(body.patchdirserv, 'install.bat')):
             sysdba = ' as sysdba' if user == 'sys' else ''
-            text = [
-                rf"spool ..\{Path('log', body.patchnum)}.{user}.log\nset define off\nset serverout on\n"
-                rf"prompt connect {user}@{body.patchalias}{sysdba};\n"
-                rf"connect {user}@{body.patchalias}{sysdba};\nprompt\ntimin start\n\n"
-                rf"insert into {body.patchowner}.patch_history (patch_name, script_name) values ('{body.patchnum}', '{user}\install.sql');\ncommit;\n"
-            ]
-            # print('ISB',get_element(form, 'isbinstall'))
+            # text = []
+            # text.append(rf"spool ..\{Path('log', body.patchnum)}.{user}.log")
+            # text.append(rf"set define off")
+            # text.append(rf"set serverout on")
+            # text.append(rf"prompt connect {user}@{body.patchalias}{sysdba};")
+            # text.append(rf"connect {user}@{body.patchalias}{sysdba};")
+            # text.append(rf"prompt")
+            # text.append(rf"timin start")
+            # text.append(rf"\ninsert into {body.patchowner}.patch_history (patch_name, script_name) values ('{body.patchnum}', '{user}\install.sql');")
+            # text.append(rf"commit;")
+            text = [f"spool ..\{Path('log', body.patchnum)}.{user}.log",
+                    f"\nset define off",
+                    f"\nset serverout on",
+                    f"\nprompt connect {user}@{body.patchalias}{sysdba};",
+                    f"\nconnect {user}@{body.patchalias}{sysdba};",
+                    f"\nprompt",
+                    f"\ntimin start",
+                    f"\n\ninsert into {body.patchowner}.patch_history (patch_name, script_name) values ('{body.patchnum}', '{user}\install.sql');",
+                    f"\ncommit;\n",
+                    ]
+            print('ISB',get_element(body, 'isbinstall'), 'user', user.lower())
             if user.lower() == 'isb' and body.isbinstall:
-                text.append('whenever sqlerror exit 1\npost db.prc_is_bimeg\nwhenever sqlerror continue\n')
+                text.append('whenever sqlerror exit 1\nexec db.prc_is_bimeg\nwhenever sqlerror continue\n')
             # get files from dir
             install_sql_rows = []
             dirs_ = (x for x in Path(body.patchdirserv, user).iterdir() if x.is_dir())
@@ -172,7 +187,7 @@ def patchInstall(patchdirserv):
         import sys
         # Формируем команду для запуска install.bat в нужной директории
         # /d — смена диска, /c — выполнить команду и выйти
-        subprocess.run(["start", "/wait", "cmd", "/C", f"cd /d {patchdirserv} && install.bat"], shell=True, check=True, env=os.environ,)
+        subprocess.run(["start", "/wait", "cmd", "/C", f"cd /d {patchdirserv} && install.bat"], shell=True, check=True, env=os.environ, )
         # subprocess.run(f'cmd.exe /c "cd /d {patchdirserv} && install.bat"', shell=True, check=True)
     except Exception as e:
         error = str(e)

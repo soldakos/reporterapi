@@ -1,0 +1,23 @@
+__pycache__/
+.run
+.pytest_cache/
+logs/
+tests/
+venv/
+.idea/
+.svn/
+.vscode/
+.git/
+.gitignore
+.dockerignore
+Dockerfile
+*.Dockerfile.*
+*.bat
+run.py
+testrun.py
+test.py
+Changelog.md
+README.md
+*.exe
+pysvn(copy to venv!!!)/
+sqlite-gui/

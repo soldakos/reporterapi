@@ -23,3 +23,5 @@ def global_resp(resp: Response, data=None, log_response=True, errcode: int = HTT
     return data
 
 
+def get_resp_status_dict(ec=0, em=''):
+    return dict(errCode=ec, errMsg=em)
