@@ -41,7 +41,8 @@ def patches_root_properties(bv_id=None):
                                   from reporter_patchesrootprops p, reporter_bittlvers bv
                                   where p.bittlvers_id = bv.id and (bv.id = :bv_id or :bv_id is null)
                                   order by p.'order'""",
-                     queryparams=[bv_id])
+                     # queryparams=[bv_id])
+                     queryparams=dict(bv_id=bv_id))
     print('patches_root_properties = ', res)
     return res
 
@@ -66,7 +67,7 @@ def patches_user_subdir_files():
 
 def patches_user_subdir_order(name):
     res = exec_query_pure(querytext="""select t.'order' from reporter_patchesusersubdir t where name = :name""",
-                          queryparams=[name],
+                          queryparams=dict(name=name),
                           array=True)
     print('patches_user_subdir_order = ', res)
     return res

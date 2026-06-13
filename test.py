@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import redminelib
 tt = {'relations': None, 'time_entries': None, 'children': None, 'attachments': None, 'changesets': None, 'journals': None, 'watchers': None, 'allowed_statuses': None, 'id': 5239,
       'project': {'id': 12, 'name': '* СИСТЕМА АСР 1.3.5 '}, 'tracker': {'id': 4, 'name': 'Тестирование'}, 'status': {'id': 7, 'name': 'Патч передан на тестирование'},
@@ -14,3 +16,5 @@ tt = {key: val for key, val in tt.items() if key != 'manager'}
 print(tt)
 
 print(bool(''))
+
+print(Path('d:\Projects\Service_center 1.3.5\bin\readme.txt').suffix)

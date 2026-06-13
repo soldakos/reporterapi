@@ -66,7 +66,7 @@ def commit_svn(url_root, url_patch, patchnum, patchdir, usr, pwd):
         for item in dir:
             if item['isDir']:
                 check_file(item['path'])
-            else:
+            elif Path(item['path']).suffix in ['.sql','.pdc','.prc','.proc','.fnc','.func','.pkg','.pck','.bdy','.trg','.log',]:
                 # check encoding
                 from charset_normalizer import from_path
                 results = from_path(item['path'])
